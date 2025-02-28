@@ -20,7 +20,13 @@ fn main() {
             });
 
             if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
+                let file_content_chars = file_contents.chars();
+                let _ = file_content_chars.for_each(|char| match char {
+                    '(' => println!("LEFT_PAREN ( null"),
+                    ')' => println!("RIGHT_PAREN ) null"),
+                    _ => {}
+                });
+                println!("EOF  null");
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
             }
