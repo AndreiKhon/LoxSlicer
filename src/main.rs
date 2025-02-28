@@ -73,6 +73,7 @@ fn main() {
                             _ => println!("SLASH / null"),
                         },
                         '\n' => line_number += 1,
+                        '\t' | ' ' => {}
                         _ => {
                             eprintln!("[line {}] Error: Unexpected character: {}", line_number, char);
                             exit_code = 65;
