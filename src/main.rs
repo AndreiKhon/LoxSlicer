@@ -64,6 +64,14 @@ fn main() {
                             },
                             _ => println!("GREATER > null"),
                         },
+                        '/' => match file_content_chars.peek() {
+                            Some('/') => {
+                                file_content_chars.next();
+                                println!("EOF  null");
+                                return;
+                            },
+                            _ => println!("SLASH / null"),
+                        },
                         '\n' => line_number += 1,
                         _ => {
                             eprintln!("[line {}] Error: Unexpected character: {}", line_number, char);
