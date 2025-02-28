@@ -43,6 +43,13 @@ fn main() {
                             },
                             _ => println!("EQUAL = null"),
                         },
+                        '!' => match file_content_chars.peek() {
+                            Some('=') => {
+                                file_content_chars.next();
+                                println!("BANG_EQUAL != null");
+                            },
+                            _ => println!("BANG ! null"),
+                        },
                         '\n' => line_number += 1,
                         _ => {
                             eprintln!("[line {}] Error: Unexpected character: {}", line_number, char);
