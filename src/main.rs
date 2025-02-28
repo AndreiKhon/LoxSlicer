@@ -66,9 +66,11 @@ fn main() {
                         },
                         '/' => match file_content_chars.peek() {
                             Some('/') => {
-                                file_content_chars.next();
-                                println!("EOF  null");
-                                return;
+                                let mut next_char = file_content_chars.next();
+                                while next_char != None && next_char != Some('\n'){
+                                    next_char = file_content_chars.next();
+                                }
+                                line_number += 1;
                             },
                             _ => println!("SLASH / null"),
                         },
