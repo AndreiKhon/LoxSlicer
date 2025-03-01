@@ -95,6 +95,38 @@ fn main() {
                             }
 
                         },
+                        char if char.is_numeric() == true => {
+                            let mut string = String::new();                            
+                            // let mut next_char = file_content_chars.peek();
+                            string.push(char);
+                            let mut is_integer = true;
+                            while let Some(next_char) = file_content_chars.peek() {
+                                if next_char.is_numeric() || *next_char == '.' {
+                                    if *next_char == '.' {
+                                        is_integer = false;
+                                    }
+                                    string.push(*next_char);
+                                    file_content_chars.next();
+                                }
+                                else {
+                                    break;
+                                }
+                            }
+                            if is_integer == true {
+                                println!("NUMBER {} {}.0", string, string);
+                            }
+                            else {
+                                let mut short_string = string.trim_end_matches('0');
+                                if short_string.chars().nth_back(0) == Some('.') {
+                                    let len = short_string.len();
+                                    short_string = &string[0..=len];
+                                }
+                                println!("NUMBER {} {}", string, short_string);
+                            }
+
+                            
+
+                        },
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
                         _ => {
