@@ -74,6 +74,27 @@ fn main() {
                             },
                             _ => println!("SLASH / null"),
                         },
+                        '"' => {
+                            let mut string = String::new();
+                            let mut next_char = file_content_chars.next();
+                            while next_char != None  && next_char != Some('"') {
+                                string.push(next_char.unwrap());
+                                next_char = file_content_chars.next();
+                            }
+                            let mut is_closed = false;
+                            match next_char {
+                                None => {},
+                                Some(_) => is_closed = true,
+                            }
+                            if is_closed == true {
+                                println!("STRING \"{}\" {}", string, string);
+                            }
+                            else {
+                                eprintln!("[line {}] Error: Unterminated string.", line_number);
+                                exit_code = 65;
+                            }
+
+                        },
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
                         _ => {
