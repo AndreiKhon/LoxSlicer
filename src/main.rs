@@ -19,7 +19,7 @@ fn check_reserved(word: &String) {
         "print" => println!("PRINT print null"),
         "return" => println!("RETURN return null"),
         "super" => println!("SUPER super null"),
-        
+
         "this" => println!("THIS this null"),
         "true" => println!("TRUE true null"),
         "var" => println!("VAR var null"),
@@ -66,63 +66,61 @@ fn main() {
                             Some('=') => {
                                 file_content_chars.next();
                                 println!("EQUAL_EQUAL == null");
-                            },
+                            }
                             _ => println!("EQUAL = null"),
                         },
                         '!' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
                                 println!("BANG_EQUAL != null");
-                            },
+                            }
                             _ => println!("BANG ! null"),
                         },
                         '<' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
                                 println!("LESS_EQUAL <= null");
-                            },
+                            }
                             _ => println!("LESS < null"),
                         },
                         '>' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
                                 println!("GREATER_EQUAL >= null");
-                            },
+                            }
                             _ => println!("GREATER > null"),
                         },
                         '/' => match file_content_chars.peek() {
                             Some('/') => {
                                 let mut next_char = file_content_chars.next();
-                                while next_char != None && next_char != Some('\n'){
+                                while next_char != None && next_char != Some('\n') {
                                     next_char = file_content_chars.next();
                                 }
                                 line_number += 1;
-                            },
+                            }
                             _ => println!("SLASH / null"),
                         },
                         '"' => {
                             let mut string = String::new();
                             let mut next_char = file_content_chars.next();
-                            while next_char != None  && next_char != Some('"') {
+                            while next_char != None && next_char != Some('"') {
                                 string.push(next_char.unwrap());
                                 next_char = file_content_chars.next();
                             }
                             let mut is_closed = false;
                             match next_char {
-                                None => {},
+                                None => {}
                                 Some(_) => is_closed = true,
                             }
                             if is_closed == true {
                                 println!("STRING \"{}\" {}", string, string);
-                            }
-                            else {
+                            } else {
                                 eprintln!("[line {}] Error: Unterminated string.", line_number);
                                 exit_code = 65;
                             }
-
-                        },
+                        }
                         char if char.is_numeric() == true => {
-                            let mut string = String::new();                            
+                            let mut string = String::new();
                             // let mut next_char = file_content_chars.peek();
                             string.push(char);
                             let mut is_integer = true;
@@ -133,15 +131,13 @@ fn main() {
                                     }
                                     string.push(*next_char);
                                     file_content_chars.next();
-                                }
-                                else {
+                                } else {
                                     break;
                                 }
                             }
                             if is_integer == true {
                                 println!("NUMBER {} {}.0", string, string);
-                            }
-                            else {
+                            } else {
                                 let mut short_string = string.trim_end_matches('0');
                                 if short_string.chars().nth_back(0) == Some('.') {
                                     let len = short_string.len();
@@ -149,27 +145,26 @@ fn main() {
                                 }
                                 println!("NUMBER {} {}", string, short_string);
                             }
-
-                            
-
-                        },
+                        }
                         char if char.is_alphabetic() || char == '_' => {
                             let mut string = String::from(char);
                             while let Some(next_char) = file_content_chars.peek() {
                                 if next_char.is_alphanumeric() || *next_char == '_' {
                                     string.push(*next_char);
                                     file_content_chars.next();
-                                }
-                                else {
+                                } else {
                                     break;
-                                } 
+                                }
                             }
                             check_reserved(&string);
-                        },
+                        }
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
                         _ => {
-                            eprintln!("[line {}] Error: Unexpected character: {}", line_number, char);
+                            eprintln!(
+                                "[line {}] Error: Unexpected character: {}",
+                                line_number, char
+                            );
                             exit_code = 65;
                         }
                     }
