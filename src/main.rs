@@ -3,6 +3,32 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 
+fn check_reserved(word: &String) {
+    match word.as_str() {
+        "and" => println!("AND and null"),
+        "class" => println!("CLASS class null"),
+        "else" => println!("ELSE else null"),
+        "false" => println!("FALSE false null"),
+
+        "for" => println!("FOR for null"),
+        "fun" => println!("FUN fun null"),
+        "if" => println!("IF if null"),
+        "nil" => println!("NIL nil null"),
+
+        "or" => println!("OR or null"),
+        "print" => println!("PRINT print null"),
+        "return" => println!("RETURN return null"),
+        "super" => println!("SUPER super null"),
+        
+        "this" => println!("THIS this null"),
+        "true" => println!("TRUE true null"),
+        "var" => println!("VAR var null"),
+        "while" => println!("WHILE while null"),
+
+        _ => println!("IDENTIFIER {} null", word),
+    }
+}
+
 fn main() {
     let mut exit_code = 0;
     let args: Vec<String> = env::args().collect();
@@ -138,7 +164,7 @@ fn main() {
                                     break;
                                 } 
                             }
-                            println!("IDENTIFIER {} null", string);
+                            check_reserved(&string);
                         },
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
