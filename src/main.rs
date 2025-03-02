@@ -1,32 +1,159 @@
 use std::env;
+use std::fmt;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 
-fn check_reserved(word: &String) {
-    match word.as_str() {
-        "and" => println!("AND and null"),
-        "class" => println!("CLASS class null"),
-        "else" => println!("ELSE else null"),
-        "false" => println!("FALSE false null"),
+pub enum TokenType {
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
 
-        "for" => println!("FOR for null"),
-        "fun" => println!("FUN fun null"),
-        "if" => println!("IF if null"),
-        "nil" => println!("NIL nil null"),
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
+    Slash,
+    Star,
 
-        "or" => println!("OR or null"),
-        "print" => println!("PRINT print null"),
-        "return" => println!("RETURN return null"),
-        "super" => println!("SUPER super null"),
+    Equal,
+    EqualEqual,
+    Bang,
+    BangEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
 
-        "this" => println!("THIS this null"),
-        "true" => println!("TRUE true null"),
-        "var" => println!("VAR var null"),
-        "while" => println!("WHILE while null"),
+    Identifier,
 
-        _ => println!("IDENTIFIER {} null", word),
+    StringLiteral(String),
+    Number(f64),
+
+    And,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+
+    Eof,
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TokenType::LeftParen => write!(f, "LEFT_PAREN"),
+            TokenType::RightParen => write!(f, "RIGHT_PAREN"),
+            TokenType::LeftBrace => write!(f, "LEFT_BRACE"),
+            TokenType::RightBrace => write!(f, "RIGHT_BRACE"),
+
+            TokenType::Comma => write!(f, "COMMA"),
+            TokenType::Dot => write!(f, "DOT"),
+            TokenType::Minus => write!(f, "MINUS"),
+            TokenType::Plus => write!(f, "PLUS"),
+            TokenType::Semicolon => write!(f, "SEMICOLON"),
+            TokenType::Slash => write!(f, "SLASH"),
+            TokenType::Star => write!(f, "STAR"),
+
+            TokenType::Equal => write!(f, "EQUAL"),
+            TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
+            TokenType::Bang => write!(f, "BANG"),
+            TokenType::BangEqual => write!(f, "BANG_EQUAL"),
+            TokenType::Less => write!(f, "LESS"),
+            TokenType::LessEqual => write!(f, "LESS_EQUAL"),
+            TokenType::Greater => write!(f, "GREATER"),
+            TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
+
+            TokenType::Identifier => write!(f, "IDENTIFIER"),
+
+            TokenType::StringLiteral(_) => write!(f, "STRING"),
+            TokenType::Number(_) => write!(f, "NUMBER"),
+
+            TokenType::And => write!(f, "AND"),
+            TokenType::Class => write!(f, "CLASS"),
+            TokenType::Else => write!(f, "ELSE"),
+            TokenType::False => write!(f, "FALSE"),
+            TokenType::Fun => write!(f, "FUN"),
+            TokenType::For => write!(f, "FOR"),
+            TokenType::If => write!(f, "IF"),
+            TokenType::Nil => write!(f, "NIL"),
+            TokenType::Or => write!(f, "OR"),
+            TokenType::Print => write!(f, "PRINT"),
+            TokenType::Return => write!(f, "RETURN"),
+            TokenType::Super => write!(f, "SUPER"),
+            TokenType::This => write!(f, "THIS"),
+            TokenType::True => write!(f, "TRUE"),
+            TokenType::Var => write!(f, "VAR"),
+            TokenType::While => write!(f, "WHILE"),
+            TokenType::Eof => write!(f, "EOF"),
+        }
     }
+}
+
+struct Token {
+    _type: TokenType,
+    lexeme: String,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let literal = match &self._type {
+            TokenType::StringLiteral(value) => value.to_string(),
+            TokenType::Number(value) => {
+                let integer: f64 = (*value as i64) as f64;
+                if integer.to_bits() == value.to_bits() {
+                    format!("{}.0", integer)
+                } else {
+                    value.to_string()
+                }
+            }
+            _ => "null".to_string(),
+        };
+        write!(f, "{} {} {}", self._type, self.lexeme, literal)
+    }
+}
+
+fn check_reserved(word: &String) -> Token {
+    let _type = match word.as_str() {
+        "and" => TokenType::And,
+        "class" => TokenType::Class,
+        "else" => TokenType::Else,
+        "false" => TokenType::False,
+
+        "for" => TokenType::For,
+        "fun" => TokenType::Fun,
+        "if" => TokenType::If,
+        "nil" => TokenType::Nil,
+
+        "or" => TokenType::Or,
+        "print" => TokenType::Print,
+        "return" => TokenType::Return,
+        "super" => TokenType::Super,
+
+        "this" => TokenType::This,
+        "true" => TokenType::True,
+        "var" => TokenType::Var,
+        "while" => TokenType::While,
+
+        _ => TokenType::Identifier,
+    };
+    return Token {
+        _type: _type,
+        lexeme: word.to_string(),
+    };
 }
 
 fn main() {
@@ -50,45 +177,100 @@ fn main() {
             if !file_contents.is_empty() {
                 let mut line_number = 1;
                 let mut file_content_chars = file_contents.chars().peekable();
+                let mut tokens: Vec<Token> = Vec::<Token>::new();
                 while let Some(char) = file_content_chars.next() {
                     match char {
-                        '(' => println!("LEFT_PAREN ( null"),
-                        ')' => println!("RIGHT_PAREN ) null"),
-                        '{' => println!("LEFT_BRACE {{ null"),
-                        '}' => println!("RIGHT_BRACE }} null"),
-                        ',' => println!("COMMA , null"),
-                        '.' => println!("DOT . null"),
-                        '-' => println!("MINUS - null"),
-                        '+' => println!("PLUS + null"),
-                        ';' => println!("SEMICOLON ; null"),
-                        '*' => println!("STAR * null"),
+                        '(' => tokens.push(Token {
+                            _type: TokenType::LeftParen,
+                            lexeme: "(".to_string(),
+                        }),
+                        ')' => tokens.push(Token {
+                            _type: TokenType::RightParen,
+                            lexeme: ")".to_string(),
+                        }),
+                        '{' => tokens.push(Token {
+                            _type: TokenType::LeftBrace,
+                            lexeme: "{".to_string(),
+                        }),
+                        '}' => tokens.push(Token {
+                            _type: TokenType::RightBrace,
+                            lexeme: "}".to_string(),
+                        }),
+                        ',' => tokens.push(Token {
+                            _type: TokenType::Comma,
+                            lexeme: ",".to_string(),
+                        }),
+                        '.' => tokens.push(Token {
+                            _type: TokenType::Dot,
+                            lexeme: ".".to_string(),
+                        }),
+                        '-' => tokens.push(Token {
+                            _type: TokenType::Minus,
+                            lexeme: "-".to_string(),
+                        }),
+                        '+' => tokens.push(Token {
+                            _type: TokenType::Plus,
+                            lexeme: "+".to_string(),
+                        }),
+                        ';' => tokens.push(Token {
+                            _type: TokenType::Semicolon,
+                            lexeme: ";".to_string(),
+                        }),
+                        '*' => tokens.push(Token {
+                            _type: TokenType::Star,
+                            lexeme: "*".to_string(),
+                        }),
                         '=' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
-                                println!("EQUAL_EQUAL == null");
+                                tokens.push(Token {
+                                    _type: TokenType::EqualEqual,
+                                    lexeme: "==".to_string(),
+                                });
                             }
-                            _ => println!("EQUAL = null"),
+                            _ => tokens.push(Token {
+                                _type: TokenType::Equal,
+                                lexeme: "=".to_string(),
+                            }),
                         },
                         '!' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
-                                println!("BANG_EQUAL != null");
+                                tokens.push(Token {
+                                    _type: TokenType::BangEqual,
+                                    lexeme: "!=".to_string(),
+                                });
                             }
-                            _ => println!("BANG ! null"),
+                            _ => tokens.push(Token {
+                                _type: TokenType::Bang,
+                                lexeme: "!".to_string(),
+                            }),
                         },
                         '<' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
-                                println!("LESS_EQUAL <= null");
+                                tokens.push(Token {
+                                    _type: TokenType::LessEqual,
+                                    lexeme: "<=".to_string(),
+                                });
                             }
-                            _ => println!("LESS < null"),
+                            _ => tokens.push(Token {
+                                _type: TokenType::Less,
+                                lexeme: "<".to_string(),
+                            }),
                         },
                         '>' => match file_content_chars.peek() {
                             Some('=') => {
                                 file_content_chars.next();
-                                println!("GREATER_EQUAL >= null");
+                                tokens.push(Token {
+                                    _type: TokenType::GreaterEqual,
+                                    lexeme: ">=".to_string(),
+                                });
                             }
-                            _ => println!("GREATER > null"),
+                            _ => tokens.push(Token {
+                                _type: TokenType::Greater,
+                                lexeme: ">".to_string(),
+                            }),
                         },
                         '/' => match file_content_chars.peek() {
                             Some('/') => {
@@ -98,7 +280,10 @@ fn main() {
                                 }
                                 line_number += 1;
                             }
-                            _ => println!("SLASH / null"),
+                            _ => tokens.push(Token {
+                                _type: TokenType::Slash,
+                                lexeme: "/".to_string(),
+                            }),
                         },
                         '"' => {
                             let mut string = String::new();
@@ -113,7 +298,13 @@ fn main() {
                                 Some(_) => is_closed = true,
                             }
                             if is_closed == true {
-                                println!("STRING \"{}\" {}", string, string);
+                                let mut quoted: String = "\"".to_string();
+                                quoted.push_str(&string);
+                                quoted.push('"');
+                                tokens.push(Token {
+                                    _type: TokenType::StringLiteral(string.clone()),
+                                    lexeme: quoted,
+                                });
                             } else {
                                 eprintln!("[line {}] Error: Unterminated string.", line_number);
                                 exit_code = 65;
@@ -121,30 +312,19 @@ fn main() {
                         }
                         char if char.is_numeric() == true => {
                             let mut string = String::new();
-                            // let mut next_char = file_content_chars.peek();
                             string.push(char);
-                            let mut is_integer = true;
                             while let Some(next_char) = file_content_chars.peek() {
                                 if next_char.is_numeric() || *next_char == '.' {
-                                    if *next_char == '.' {
-                                        is_integer = false;
-                                    }
                                     string.push(*next_char);
                                     file_content_chars.next();
                                 } else {
                                     break;
                                 }
                             }
-                            if is_integer == true {
-                                println!("NUMBER {} {}.0", string, string);
-                            } else {
-                                let mut short_string = string.trim_end_matches('0');
-                                if short_string.chars().nth_back(0) == Some('.') {
-                                    let len = short_string.len();
-                                    short_string = &string[0..=len];
-                                }
-                                println!("NUMBER {} {}", string, short_string);
-                            }
+                            tokens.push(Token {
+                                _type: TokenType::Number(string.parse().unwrap()),
+                                lexeme: string,
+                            });
                         }
                         char if char.is_alphabetic() || char == '_' => {
                             let mut string = String::from(char);
@@ -156,7 +336,8 @@ fn main() {
                                     break;
                                 }
                             }
-                            check_reserved(&string);
+                            let token = check_reserved(&string);
+                            tokens.push(token);
                         }
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
@@ -169,12 +350,21 @@ fn main() {
                         }
                     }
                 }
-                println!("EOF  null");
+
+                tokens.push(Token {
+                    _type: TokenType::Eof,
+                    lexeme: "".to_string(),
+                });
+
+                for token in tokens {
+                    println!("{}", token);
+                }
+
                 if exit_code != 0 {
                     exit(exit_code)
                 }
             } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+                println!("EOF  null");
             }
         }
         _ => {
