@@ -127,6 +127,19 @@ fn main() {
                             
 
                         },
+                        char if char.is_alphabetic() || char == '_' => {
+                            let mut string = String::from(char);
+                            while let Some(next_char) = file_content_chars.peek() {
+                                if next_char.is_alphanumeric() || *next_char == '_' {
+                                    string.push(*next_char);
+                                    file_content_chars.next();
+                                }
+                                else {
+                                    break;
+                                } 
+                            }
+                            println!("IDENTIFIER {} null", string);
+                        },
                         '\n' => line_number += 1,
                         '\t' | ' ' => {}
                         _ => {
