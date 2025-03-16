@@ -156,8 +156,200 @@ fn check_reserved(word: &String) -> Token {
     };
 }
 
+pub struct Scanner {}
+
+impl Scanner {
+    pub fn scan(file_contents: String) -> (Vec<Token>, i32) {
+        let mut exit_code = 0;
+        let mut tokens: Vec<Token> = Vec::<Token>::new();
+        if !file_contents.is_empty() {
+            let mut line_number = 1;
+            let mut file_content_chars = file_contents.chars().peekable();
+
+            while let Some(char) = file_content_chars.next() {
+                match char {
+                    '(' => tokens.push(Token {
+                        _type: TokenType::LeftParen,
+                        lexeme: "(".to_string(),
+                    }),
+                    ')' => tokens.push(Token {
+                        _type: TokenType::RightParen,
+                        lexeme: ")".to_string(),
+                    }),
+                    '{' => tokens.push(Token {
+                        _type: TokenType::LeftBrace,
+                        lexeme: "{".to_string(),
+                    }),
+                    '}' => tokens.push(Token {
+                        _type: TokenType::RightBrace,
+                        lexeme: "}".to_string(),
+                    }),
+                    ',' => tokens.push(Token {
+                        _type: TokenType::Comma,
+                        lexeme: ",".to_string(),
+                    }),
+                    '.' => tokens.push(Token {
+                        _type: TokenType::Dot,
+                        lexeme: ".".to_string(),
+                    }),
+                    '-' => tokens.push(Token {
+                        _type: TokenType::Minus,
+                        lexeme: "-".to_string(),
+                    }),
+                    '+' => tokens.push(Token {
+                        _type: TokenType::Plus,
+                        lexeme: "+".to_string(),
+                    }),
+                    ';' => tokens.push(Token {
+                        _type: TokenType::Semicolon,
+                        lexeme: ";".to_string(),
+                    }),
+                    '*' => tokens.push(Token {
+                        _type: TokenType::Star,
+                        lexeme: "*".to_string(),
+                    }),
+                    '=' => match file_content_chars.peek() {
+                        Some('=') => {
+                            file_content_chars.next();
+                            tokens.push(Token {
+                                _type: TokenType::EqualEqual,
+                                lexeme: "==".to_string(),
+                            });
+                        }
+                        _ => tokens.push(Token {
+                            _type: TokenType::Equal,
+                            lexeme: "=".to_string(),
+                        }),
+                    },
+                    '!' => match file_content_chars.peek() {
+                        Some('=') => {
+                            file_content_chars.next();
+                            tokens.push(Token {
+                                _type: TokenType::BangEqual,
+                                lexeme: "!=".to_string(),
+                            });
+                        }
+                        _ => tokens.push(Token {
+                            _type: TokenType::Bang,
+                            lexeme: "!".to_string(),
+                        }),
+                    },
+                    '<' => match file_content_chars.peek() {
+                        Some('=') => {
+                            file_content_chars.next();
+                            tokens.push(Token {
+                                _type: TokenType::LessEqual,
+                                lexeme: "<=".to_string(),
+                            });
+                        }
+                        _ => tokens.push(Token {
+                            _type: TokenType::Less,
+                            lexeme: "<".to_string(),
+                        }),
+                    },
+                    '>' => match file_content_chars.peek() {
+                        Some('=') => {
+                            file_content_chars.next();
+                            tokens.push(Token {
+                                _type: TokenType::GreaterEqual,
+                                lexeme: ">=".to_string(),
+                            });
+                        }
+                        _ => tokens.push(Token {
+                            _type: TokenType::Greater,
+                            lexeme: ">".to_string(),
+                        }),
+                    },
+                    '/' => match file_content_chars.peek() {
+                        Some('/') => {
+                            let mut next_char = file_content_chars.next();
+                            while next_char != None && next_char != Some('\n') {
+                                next_char = file_content_chars.next();
+                            }
+                            line_number += 1;
+                        }
+                        _ => tokens.push(Token {
+                            _type: TokenType::Slash,
+                            lexeme: "/".to_string(),
+                        }),
+                    },
+                    '"' => {
+                        let mut string = String::new();
+                        let mut next_char = file_content_chars.next();
+                        while next_char != None && next_char != Some('"') {
+                            string.push(next_char.unwrap());
+                            next_char = file_content_chars.next();
+                        }
+                        let mut is_closed = false;
+                        match next_char {
+                            None => {}
+                            Some(_) => is_closed = true,
+                        }
+                        if is_closed == true {
+                            let mut quoted: String = "\"".to_string();
+                            quoted.push_str(&string);
+                            quoted.push('"');
+                            tokens.push(Token {
+                                _type: TokenType::StringLiteral(string.clone()),
+                                lexeme: quoted,
+                            });
+                        } else {
+                            eprintln!("[line {}] Error: Unterminated string.", line_number);
+                            exit_code = 65;
+                        }
+                    }
+                    char if char.is_numeric() == true => {
+                        let mut string = String::new();
+                        string.push(char);
+                        while let Some(next_char) = file_content_chars.peek() {
+                            if next_char.is_numeric() || *next_char == '.' {
+                                string.push(*next_char);
+                                file_content_chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+                        tokens.push(Token {
+                            _type: TokenType::Number(string.parse().unwrap()),
+                            lexeme: string,
+                        });
+                    }
+                    char if char.is_alphabetic() || char == '_' => {
+                        let mut string = String::from(char);
+                        while let Some(next_char) = file_content_chars.peek() {
+                            if next_char.is_alphanumeric() || *next_char == '_' {
+                                string.push(*next_char);
+                                file_content_chars.next();
+                            } else {
+                                break;
+                            }
+                        }
+                        let token = check_reserved(&string);
+                        tokens.push(token);
+                    }
+                    '\n' => line_number += 1,
+                    '\t' | ' ' => {}
+                    _ => {
+                        eprintln!(
+                            "[line {}] Error: Unexpected character: {}",
+                            line_number, char
+                        );
+                        exit_code = 65;
+                    }
+                }
+            }
+        }
+
+        tokens.push(Token {
+            _type: TokenType::Eof,
+            lexeme: "".to_string(),
+        });
+
+        return (tokens, exit_code);
+    }
+}
+
 fn main() {
-    let mut exit_code = 0;
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
         writeln!(io::stderr(), "Usage: {} tokenize <filename>", args[0]).unwrap();
@@ -174,197 +366,14 @@ fn main() {
                 String::new()
             });
 
-            if !file_contents.is_empty() {
-                let mut line_number = 1;
-                let mut file_content_chars = file_contents.chars().peekable();
-                let mut tokens: Vec<Token> = Vec::<Token>::new();
-                while let Some(char) = file_content_chars.next() {
-                    match char {
-                        '(' => tokens.push(Token {
-                            _type: TokenType::LeftParen,
-                            lexeme: "(".to_string(),
-                        }),
-                        ')' => tokens.push(Token {
-                            _type: TokenType::RightParen,
-                            lexeme: ")".to_string(),
-                        }),
-                        '{' => tokens.push(Token {
-                            _type: TokenType::LeftBrace,
-                            lexeme: "{".to_string(),
-                        }),
-                        '}' => tokens.push(Token {
-                            _type: TokenType::RightBrace,
-                            lexeme: "}".to_string(),
-                        }),
-                        ',' => tokens.push(Token {
-                            _type: TokenType::Comma,
-                            lexeme: ",".to_string(),
-                        }),
-                        '.' => tokens.push(Token {
-                            _type: TokenType::Dot,
-                            lexeme: ".".to_string(),
-                        }),
-                        '-' => tokens.push(Token {
-                            _type: TokenType::Minus,
-                            lexeme: "-".to_string(),
-                        }),
-                        '+' => tokens.push(Token {
-                            _type: TokenType::Plus,
-                            lexeme: "+".to_string(),
-                        }),
-                        ';' => tokens.push(Token {
-                            _type: TokenType::Semicolon,
-                            lexeme: ";".to_string(),
-                        }),
-                        '*' => tokens.push(Token {
-                            _type: TokenType::Star,
-                            lexeme: "*".to_string(),
-                        }),
-                        '=' => match file_content_chars.peek() {
-                            Some('=') => {
-                                file_content_chars.next();
-                                tokens.push(Token {
-                                    _type: TokenType::EqualEqual,
-                                    lexeme: "==".to_string(),
-                                });
-                            }
-                            _ => tokens.push(Token {
-                                _type: TokenType::Equal,
-                                lexeme: "=".to_string(),
-                            }),
-                        },
-                        '!' => match file_content_chars.peek() {
-                            Some('=') => {
-                                file_content_chars.next();
-                                tokens.push(Token {
-                                    _type: TokenType::BangEqual,
-                                    lexeme: "!=".to_string(),
-                                });
-                            }
-                            _ => tokens.push(Token {
-                                _type: TokenType::Bang,
-                                lexeme: "!".to_string(),
-                            }),
-                        },
-                        '<' => match file_content_chars.peek() {
-                            Some('=') => {
-                                file_content_chars.next();
-                                tokens.push(Token {
-                                    _type: TokenType::LessEqual,
-                                    lexeme: "<=".to_string(),
-                                });
-                            }
-                            _ => tokens.push(Token {
-                                _type: TokenType::Less,
-                                lexeme: "<".to_string(),
-                            }),
-                        },
-                        '>' => match file_content_chars.peek() {
-                            Some('=') => {
-                                file_content_chars.next();
-                                tokens.push(Token {
-                                    _type: TokenType::GreaterEqual,
-                                    lexeme: ">=".to_string(),
-                                });
-                            }
-                            _ => tokens.push(Token {
-                                _type: TokenType::Greater,
-                                lexeme: ">".to_string(),
-                            }),
-                        },
-                        '/' => match file_content_chars.peek() {
-                            Some('/') => {
-                                let mut next_char = file_content_chars.next();
-                                while next_char != None && next_char != Some('\n') {
-                                    next_char = file_content_chars.next();
-                                }
-                                line_number += 1;
-                            }
-                            _ => tokens.push(Token {
-                                _type: TokenType::Slash,
-                                lexeme: "/".to_string(),
-                            }),
-                        },
-                        '"' => {
-                            let mut string = String::new();
-                            let mut next_char = file_content_chars.next();
-                            while next_char != None && next_char != Some('"') {
-                                string.push(next_char.unwrap());
-                                next_char = file_content_chars.next();
-                            }
-                            let mut is_closed = false;
-                            match next_char {
-                                None => {}
-                                Some(_) => is_closed = true,
-                            }
-                            if is_closed == true {
-                                let mut quoted: String = "\"".to_string();
-                                quoted.push_str(&string);
-                                quoted.push('"');
-                                tokens.push(Token {
-                                    _type: TokenType::StringLiteral(string.clone()),
-                                    lexeme: quoted,
-                                });
-                            } else {
-                                eprintln!("[line {}] Error: Unterminated string.", line_number);
-                                exit_code = 65;
-                            }
-                        }
-                        char if char.is_numeric() == true => {
-                            let mut string = String::new();
-                            string.push(char);
-                            while let Some(next_char) = file_content_chars.peek() {
-                                if next_char.is_numeric() || *next_char == '.' {
-                                    string.push(*next_char);
-                                    file_content_chars.next();
-                                } else {
-                                    break;
-                                }
-                            }
-                            tokens.push(Token {
-                                _type: TokenType::Number(string.parse().unwrap()),
-                                lexeme: string,
-                            });
-                        }
-                        char if char.is_alphabetic() || char == '_' => {
-                            let mut string = String::from(char);
-                            while let Some(next_char) = file_content_chars.peek() {
-                                if next_char.is_alphanumeric() || *next_char == '_' {
-                                    string.push(*next_char);
-                                    file_content_chars.next();
-                                } else {
-                                    break;
-                                }
-                            }
-                            let token = check_reserved(&string);
-                            tokens.push(token);
-                        }
-                        '\n' => line_number += 1,
-                        '\t' | ' ' => {}
-                        _ => {
-                            eprintln!(
-                                "[line {}] Error: Unexpected character: {}",
-                                line_number, char
-                            );
-                            exit_code = 65;
-                        }
-                    }
-                }
+            let (tokens, exit_code) = Scanner::scan(file_contents);
 
-                tokens.push(Token {
-                    _type: TokenType::Eof,
-                    lexeme: "".to_string(),
-                });
+            for token in tokens {
+                println!("{}", token);
+            }
 
-                for token in tokens {
-                    println!("{}", token);
-                }
-
-                if exit_code != 0 {
-                    exit(exit_code)
-                }
-            } else {
-                println!("EOF  null");
+            if exit_code != 0 {
+                exit(exit_code)
             }
         }
         _ => {
