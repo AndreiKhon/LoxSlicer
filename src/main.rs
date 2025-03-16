@@ -376,6 +376,22 @@ fn main() {
                 exit(exit_code)
             }
         }
+        "parse" => {
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+
+            let (tokens, exit_code) = Scanner::scan(file_contents);
+
+            for token in tokens {
+                println!("{}", token.lexeme);
+            }
+
+            if exit_code != 0 {
+                exit(exit_code)
+            }
+        }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
             return;
