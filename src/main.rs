@@ -385,7 +385,11 @@ fn main() {
             let (tokens, exit_code) = Scanner::scan(file_contents);
 
             for token in tokens {
-                println!("{}", token.lexeme);
+
+                match token._type {
+                    TokenType::Number(n) => println!("{:?}", n),
+                    _ => println!("{}", token.lexeme),
+                };
             }
 
             if exit_code != 0 {
