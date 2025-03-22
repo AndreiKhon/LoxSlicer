@@ -386,13 +386,14 @@ fn main() {
 
             for token in tokens {
                 match token._type {
-                    TokenType::Number(n) => println!("{:?}", n),
+                    TokenType::Number(n) => print!("{:?}", n),
                     TokenType::StringLiteral(string) => {
                         let len = token.lexeme.len();
                         let raw_string: String = token.lexeme.chars().skip(1).take(len - 2).collect();
-                        println!("{}", raw_string);
+                        print!("{}", raw_string);
                     }
-                    _ => println!("{}", token.lexeme.to_string()),
+                    TokenType::LeftParen => print!("(group "),
+                    _ => print!("{}", token.lexeme.to_string()),
                 };
             }
 
