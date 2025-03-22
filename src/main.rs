@@ -385,10 +385,14 @@ fn main() {
             let (tokens, exit_code) = Scanner::scan(file_contents);
 
             for token in tokens {
-
                 match token._type {
                     TokenType::Number(n) => println!("{:?}", n),
-                    _ => println!("{}", token.lexeme),
+                    TokenType::StringLiteral(string) => {
+                        let len = token.lexeme.len();
+                        let raw_string: String = token.lexeme.chars().skip(1).take(len - 2).collect();
+                        println!("{}", raw_string);
+                    }
+                    _ => println!("{}", token.lexeme.to_string()),
                 };
             }
 
