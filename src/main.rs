@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 
+#[derive(Clone)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -103,9 +104,11 @@ impl fmt::Display for TokenType {
     }
 }
 
-struct Token {
+#[derive(Clone)]
+pub struct Token {
     _type: TokenType,
     lexeme: String,
+    line: usize,
 }
 
 impl fmt::Display for Token {
@@ -126,8 +129,8 @@ impl fmt::Display for Token {
     }
 }
 
-fn check_reserved(word: &String) -> Token {
-    let _type = match word.as_str() {
+fn check_reserved(word: &String) -> TokenType {
+    match word.as_str() {
         "and" => TokenType::And,
         "class" => TokenType::Class,
         "else" => TokenType::Else,
@@ -149,11 +152,7 @@ fn check_reserved(word: &String) -> Token {
         "while" => TokenType::While,
 
         _ => TokenType::Identifier,
-    };
-    return Token {
-        _type: _type,
-        lexeme: word.to_string(),
-    };
+    }
 }
 
 pub struct Scanner {}
@@ -162,8 +161,8 @@ impl Scanner {
     pub fn scan(file_contents: String) -> (Vec<Token>, i32) {
         let mut exit_code = 0;
         let mut tokens: Vec<Token> = Vec::<Token>::new();
+        let mut line_number = 1;
         if !file_contents.is_empty() {
-            let mut line_number = 1;
             let mut file_content_chars = file_contents.chars().peekable();
 
             while let Some(char) = file_content_chars.next() {
@@ -171,42 +170,52 @@ impl Scanner {
                     '(' => tokens.push(Token {
                         _type: TokenType::LeftParen,
                         lexeme: "(".to_string(),
+                        line: line_number,
                     }),
                     ')' => tokens.push(Token {
                         _type: TokenType::RightParen,
                         lexeme: ")".to_string(),
+                        line: line_number,
                     }),
                     '{' => tokens.push(Token {
                         _type: TokenType::LeftBrace,
                         lexeme: "{".to_string(),
+                        line: line_number,
                     }),
                     '}' => tokens.push(Token {
                         _type: TokenType::RightBrace,
                         lexeme: "}".to_string(),
+                        line: line_number,
                     }),
                     ',' => tokens.push(Token {
                         _type: TokenType::Comma,
                         lexeme: ",".to_string(),
+                        line: line_number,
                     }),
                     '.' => tokens.push(Token {
                         _type: TokenType::Dot,
                         lexeme: ".".to_string(),
+                        line: line_number,
                     }),
                     '-' => tokens.push(Token {
                         _type: TokenType::Minus,
                         lexeme: "-".to_string(),
+                        line: line_number,
                     }),
                     '+' => tokens.push(Token {
                         _type: TokenType::Plus,
                         lexeme: "+".to_string(),
+                        line: line_number,
                     }),
                     ';' => tokens.push(Token {
                         _type: TokenType::Semicolon,
                         lexeme: ";".to_string(),
+                        line: line_number,
                     }),
                     '*' => tokens.push(Token {
                         _type: TokenType::Star,
                         lexeme: "*".to_string(),
+                        line: line_number,
                     }),
                     '=' => match file_content_chars.peek() {
                         Some('=') => {
@@ -214,11 +223,13 @@ impl Scanner {
                             tokens.push(Token {
                                 _type: TokenType::EqualEqual,
                                 lexeme: "==".to_string(),
+                                line: line_number,
                             });
                         }
                         _ => tokens.push(Token {
                             _type: TokenType::Equal,
                             lexeme: "=".to_string(),
+                            line: line_number,
                         }),
                     },
                     '!' => match file_content_chars.peek() {
@@ -227,11 +238,13 @@ impl Scanner {
                             tokens.push(Token {
                                 _type: TokenType::BangEqual,
                                 lexeme: "!=".to_string(),
+                                line: line_number,
                             });
                         }
                         _ => tokens.push(Token {
                             _type: TokenType::Bang,
                             lexeme: "!".to_string(),
+                            line: line_number,
                         }),
                     },
                     '<' => match file_content_chars.peek() {
@@ -240,11 +253,13 @@ impl Scanner {
                             tokens.push(Token {
                                 _type: TokenType::LessEqual,
                                 lexeme: "<=".to_string(),
+                                line: line_number,
                             });
                         }
                         _ => tokens.push(Token {
                             _type: TokenType::Less,
                             lexeme: "<".to_string(),
+                            line: line_number,
                         }),
                     },
                     '>' => match file_content_chars.peek() {
@@ -253,11 +268,13 @@ impl Scanner {
                             tokens.push(Token {
                                 _type: TokenType::GreaterEqual,
                                 lexeme: ">=".to_string(),
+                                line: line_number,
                             });
                         }
                         _ => tokens.push(Token {
                             _type: TokenType::Greater,
                             lexeme: ">".to_string(),
+                            line: line_number,
                         }),
                     },
                     '/' => match file_content_chars.peek() {
@@ -271,6 +288,7 @@ impl Scanner {
                         _ => tokens.push(Token {
                             _type: TokenType::Slash,
                             lexeme: "/".to_string(),
+                            line: line_number,
                         }),
                     },
                     '"' => {
@@ -292,6 +310,7 @@ impl Scanner {
                             tokens.push(Token {
                                 _type: TokenType::StringLiteral(string.clone()),
                                 lexeme: quoted,
+                                line: line_number,
                             });
                         } else {
                             eprintln!("[line {}] Error: Unterminated string.", line_number);
@@ -312,6 +331,7 @@ impl Scanner {
                         tokens.push(Token {
                             _type: TokenType::Number(string.parse().unwrap()),
                             lexeme: string,
+                            line: line_number,
                         });
                     }
                     char if char.is_alphabetic() || char == '_' => {
@@ -324,8 +344,12 @@ impl Scanner {
                                 break;
                             }
                         }
-                        let token = check_reserved(&string);
-                        tokens.push(token);
+                        let token_type = check_reserved(&string);
+                        tokens.push(Token {
+                            _type: token_type,
+                            lexeme: string,
+                            line: line_number,
+                        });
                     }
                     '\n' => line_number += 1,
                     '\t' | ' ' => {}
@@ -343,9 +367,202 @@ impl Scanner {
         tokens.push(Token {
             _type: TokenType::Eof,
             lexeme: "".to_string(),
+            line: line_number,
         });
 
         return (tokens, exit_code);
+    }
+}
+
+enum Expression {
+    Literal(Token),
+    Unary(Token, Box<Expression>),
+    Binary(Box<Expression>, Token, Box<Expression>),
+    Grouping(Box<Expression>),
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Expression::Literal(value) => write!(f, "{}", value.lexeme),
+            Expression::Unary(operator, expression) => {
+                write!(f, "({} {})", operator.lexeme, expression)
+            }
+            Expression::Binary(left, operator, right) => {
+                write!(f, "({} {} {})", left, right, operator.lexeme)
+            }
+            Expression::Grouping(expression) => write!(f, "(group {}", expression),
+        }
+    }
+}
+
+pub struct Parser {
+    tokens: Vec<Token>,
+    current: usize,
+}
+
+type ParserResult = Result<Expression, String>;
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Self {
+        Parser { tokens, current: 0 }
+    }
+
+    pub fn parse(&mut self) -> ParserResult {
+        return self.expression();
+    }
+
+    fn expression(&mut self) -> ParserResult {
+        return self.equality();
+    }
+
+    fn equality(&mut self) -> ParserResult {
+        let mut lhs = self.comparison();
+
+        while matches!(
+            self.peek()._type,
+            TokenType::BangEqual | TokenType::EqualEqual
+        ) {
+            let operator = self.previous();
+            let rhs = self.comparison();
+            lhs = Ok(Expression::Binary(
+                Box::new(lhs.unwrap()),
+                operator,
+                Box::new(rhs.unwrap()),
+            ));
+        }
+
+        return lhs;
+    }
+
+    fn comparison(&mut self) -> ParserResult {
+        let mut lhs = self.term();
+
+        while matches!(
+            self.peek()._type,
+            TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual
+        ) {
+            let operator = self.previous();
+            let rhs = self.term();
+            lhs = Ok(Expression::Binary(
+                Box::new(lhs.unwrap()),
+                operator,
+                Box::new(rhs.unwrap()),
+            ));
+        }
+
+        return lhs;
+    }
+
+    fn term(&mut self) -> ParserResult {
+        let mut lhs = self.factor();
+
+        while matches!(self.peek()._type, TokenType::Minus | TokenType::Plus) {
+            let operator = self.previous();
+            let rhs = self.factor();
+            lhs = Ok(Expression::Binary(
+                Box::new(lhs.unwrap()),
+                operator,
+                Box::new(rhs.unwrap()),
+            ));
+        }
+
+        return lhs;
+    }
+
+    fn factor(&mut self) -> ParserResult {
+        let mut left = self.unary();
+
+        while matches!(self.peek()._type, TokenType::Slash | TokenType::Star) {
+            let operator = self.previous();
+            let right = self.unary();
+            left = Ok(Expression::Binary(
+                Box::new(left.unwrap()),
+                operator,
+                Box::new(right.unwrap()),
+            ));
+        }
+
+        return left;
+    }
+
+    fn unary(&mut self) -> ParserResult {
+        if matches!(self.peek()._type, TokenType::Bang | TokenType::Minus) {
+            let operator = self.previous();
+            let right = self.unary();
+
+            return Ok(Expression::Unary(operator, Box::new(right.unwrap())));
+        }
+
+        return self.primary();
+    }
+
+    fn primary(&mut self) -> ParserResult {
+        if matches!(
+            self.peek()._type,
+            TokenType::False
+                | TokenType::True
+                | TokenType::Nil
+                | TokenType::Number(_)
+                | TokenType::StringLiteral(_)
+        ) {
+            return Ok(Expression::Literal(self.advance()));
+        }
+
+        if matches!(self.peek()._type, TokenType::LeftParen) {
+            let expression = self.expression();
+            // self.consume(
+            //     TokenType::RightParen,
+            //     "Expect ')' after expression.".to_string(),
+            // );
+            if !matches!(self.peek()._type, TokenType::RightParen) {
+                return Err("Expect ')' after expression".to_string());
+            }
+            // self.advance();
+            return Ok(Expression::Grouping(Box::new(expression.unwrap())));
+        }
+        return Err("Unknown Error".to_string());
+    }
+
+    // fn consume(&self, _type: TokenType, message: String) -> Token {
+    //     if self.check(_type) {
+    //         return self.advance();
+    //     }
+
+    //     return Err(error(self.peek(), message));
+    // }
+
+    fn error(token: Token, message: String) -> String {
+        match token._type {
+            TokenType::Eof => token.line.to_string() + " at end" + &message,
+            _ => token.line.to_string() + " at" + &token.lexeme + "'" + &message,
+        }
+    }
+
+    // fn check(&self, token_type: TokenType) -> bool {
+    //     if !self.is_at_end() {
+    //         return false;
+    //     }
+    //     return matches!(self.peek()._type, token_type);
+    // }
+
+    fn advance(&mut self) -> Token {
+        if !self.is_at_end() {
+            self.current += 1;
+        }
+        return self.previous();
+    }
+
+    fn is_at_end(&self) -> bool {
+        return matches!(self.peek()._type, TokenType::Eof);
+    }
+
+    fn peek(&self) -> &Token {
+        return &self.tokens[self.current];
+    }
+
+    fn previous(&self) -> Token {
+        return self.tokens[self.current - 1].clone();
     }
 }
 
@@ -384,21 +601,14 @@ fn main() {
 
             let (tokens, exit_code) = Scanner::scan(file_contents);
 
-            for token in tokens {
-                match token._type {
-                    TokenType::Number(n) => print!("{:?}", n),
-                    TokenType::StringLiteral(string) => {
-                        let len = token.lexeme.len();
-                        let raw_string: String = token.lexeme.chars().skip(1).take(len - 2).collect();
-                        print!("{}", raw_string);
-                    }
-                    TokenType::LeftParen => print!("(group "),
-                    _ => print!("{}", token.lexeme.to_string()),
-                };
-            }
-
             if exit_code != 0 {
                 exit(exit_code)
+            }
+
+            let expression = Parser::new(tokens).parse();
+            match expression {
+                Ok(n) => println!("{}", n),
+                Err(e) => eprintln!("{}", e),
             }
         }
         _ => {
