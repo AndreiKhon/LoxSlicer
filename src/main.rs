@@ -403,7 +403,7 @@ impl fmt::Display for Expression {
                 write!(f, "({} {})", operator.lexeme, expression)
             }
             Expression::Binary(left, operator, right) => {
-                write!(f, "({} {} {})", left, right, operator.lexeme)
+                write!(f, "({} {} {})",operator.lexeme, left, right)
             }
             Expression::Grouping(expression) => write!(f, "(group {})", expression),
         }
