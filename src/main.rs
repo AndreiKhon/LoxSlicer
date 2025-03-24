@@ -403,7 +403,7 @@ impl fmt::Display for Expression {
                 write!(f, "({} {})", operator.lexeme, expression)
             }
             Expression::Binary(left, operator, right) => {
-                write!(f, "({} {} {})",operator.lexeme, left, right)
+                write!(f, "({} {} {})", operator.lexeme, left, right)
             }
             Expression::Grouping(expression) => write!(f, "(group {})", expression),
         }
@@ -431,81 +431,65 @@ impl Parser {
     }
 
     fn equality(&mut self) -> ParserResult {
-        let mut lhs = self.comparison();
+        let mut lhs = self.comparison()?;
 
         while matches!(
             self.peek()._type,
             TokenType::BangEqual | TokenType::EqualEqual
         ) {
             let operator = self.advance();
-            let rhs = self.comparison();
-            lhs = Ok(Expression::Binary(
-                Box::new(lhs.unwrap()),
-                operator,
-                Box::new(rhs.unwrap()),
-            ));
+            let rhs = self.comparison()?;
+            lhs = Expression::Binary(Box::new(lhs), operator, Box::new(rhs));
         }
 
-        return lhs;
+        return Ok(lhs);
     }
 
     fn comparison(&mut self) -> ParserResult {
-        let mut lhs = self.term();
+        let mut lhs = self.term()?;
 
         while matches!(
             self.peek()._type,
             TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual
         ) {
             let operator = self.advance();
-            let rhs = self.term();
-            lhs = Ok(Expression::Binary(
-                Box::new(lhs.unwrap()),
-                operator,
-                Box::new(rhs.unwrap()),
-            ));
+            let rhs = self.term()?;
+            lhs = Expression::Binary(Box::new(lhs), operator, Box::new(rhs));
         }
 
-        return lhs;
+        return Ok(lhs);
     }
 
     fn term(&mut self) -> ParserResult {
-        let mut lhs = self.factor();
+        let mut lhs = self.factor()?;
 
         while matches!(self.peek()._type, TokenType::Minus | TokenType::Plus) {
             let operator = self.advance();
-            let rhs = self.factor();
-            lhs = Ok(Expression::Binary(
-                Box::new(lhs.unwrap()),
-                operator,
-                Box::new(rhs.unwrap()),
-            ));
+            let rhs = self.factor()?;
+            lhs = Expression::Binary(Box::new(lhs), operator, Box::new(rhs));
         }
 
-        return lhs;
+        return Ok(lhs);
     }
 
     fn factor(&mut self) -> ParserResult {
-        let mut left = self.unary();
+        let mut left = self.unary()?;
 
         while matches!(self.peek()._type, TokenType::Slash | TokenType::Star) {
             let operator = self.advance();
-            let right = self.unary();
-            left = Ok(Expression::Binary(
-                Box::new(left.unwrap()),
-                operator,
-                Box::new(right.unwrap()),
-            ));
+            let right = self.unary()?;
+            left = Expression::Binary(Box::new(left), operator, Box::new(right));
         }
 
-        return left;
+        return Ok(left);
     }
 
     fn unary(&mut self) -> ParserResult {
         if matches!(self.peek()._type, TokenType::Bang | TokenType::Minus) {
             let operator = self.advance();
-            let right = self.unary();
+            let right = self.unary()?;
 
-            return Ok(Expression::Unary(operator, Box::new(right.unwrap())));
+            return Ok(Expression::Unary(operator, Box::new(right)));
         }
 
         return self.primary();
@@ -525,13 +509,13 @@ impl Parser {
 
         if matches!(self.peek()._type, TokenType::LeftParen) {
             self.advance();
-            let expression = self.expression();
+            let expression = self.expression()?;
 
             if !matches!(self.peek()._type, TokenType::RightParen) {
                 return Err("Expect ')' after expression".to_string());
             }
             self.advance();
-            return Ok(Expression::Grouping(Box::new(expression.unwrap())));
+            return Ok(Expression::Grouping(Box::new(expression)));
         }
         return Err("Unknown Error".to_string());
     }
@@ -612,7 +596,10 @@ fn main() {
             let expression = Parser::new(tokens).parse();
             match expression {
                 Ok(n) => println!("{}", n),
-                Err(e) => eprintln!("{}", e),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(65);
+                }
             }
         }
         _ => {
