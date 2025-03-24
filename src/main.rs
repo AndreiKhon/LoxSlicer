@@ -384,14 +384,28 @@ enum Expression {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expression::Literal(value) => write!(f, "{}", value.lexeme),
+            Expression::Literal(value) => {
+                let literal = match &value._type {
+                    TokenType::StringLiteral(value) => value.to_string(),
+                    TokenType::Number(value) => {
+                        let integer: f64 = (*value as i64) as f64;
+                        if integer.to_bits() == value.to_bits() {
+                            format!("{}.0", integer)
+                        } else {
+                            value.to_string()
+                        }
+                    }
+                    _ => format!("{}", value.lexeme),
+                };
+                write!(f, "{}", literal)
+            }
             Expression::Unary(operator, expression) => {
                 write!(f, "({} {})", operator.lexeme, expression)
             }
             Expression::Binary(left, operator, right) => {
                 write!(f, "({} {} {})", left, right, operator.lexeme)
             }
-            Expression::Grouping(expression) => write!(f, "(group {}", expression),
+            Expression::Grouping(expression) => write!(f, "(group {})", expression),
         }
     }
 }
@@ -423,7 +437,7 @@ impl Parser {
             self.peek()._type,
             TokenType::BangEqual | TokenType::EqualEqual
         ) {
-            let operator = self.previous();
+            let operator = self.advance();
             let rhs = self.comparison();
             lhs = Ok(Expression::Binary(
                 Box::new(lhs.unwrap()),
@@ -442,7 +456,7 @@ impl Parser {
             self.peek()._type,
             TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual
         ) {
-            let operator = self.previous();
+            let operator = self.advance();
             let rhs = self.term();
             lhs = Ok(Expression::Binary(
                 Box::new(lhs.unwrap()),
@@ -458,7 +472,7 @@ impl Parser {
         let mut lhs = self.factor();
 
         while matches!(self.peek()._type, TokenType::Minus | TokenType::Plus) {
-            let operator = self.previous();
+            let operator = self.advance();
             let rhs = self.factor();
             lhs = Ok(Expression::Binary(
                 Box::new(lhs.unwrap()),
@@ -474,7 +488,7 @@ impl Parser {
         let mut left = self.unary();
 
         while matches!(self.peek()._type, TokenType::Slash | TokenType::Star) {
-            let operator = self.previous();
+            let operator = self.advance();
             let right = self.unary();
             left = Ok(Expression::Binary(
                 Box::new(left.unwrap()),
@@ -488,7 +502,7 @@ impl Parser {
 
     fn unary(&mut self) -> ParserResult {
         if matches!(self.peek()._type, TokenType::Bang | TokenType::Minus) {
-            let operator = self.previous();
+            let operator = self.advance();
             let right = self.unary();
 
             return Ok(Expression::Unary(operator, Box::new(right.unwrap())));
@@ -510,27 +524,17 @@ impl Parser {
         }
 
         if matches!(self.peek()._type, TokenType::LeftParen) {
+            self.advance();
             let expression = self.expression();
-            // self.consume(
-            //     TokenType::RightParen,
-            //     "Expect ')' after expression.".to_string(),
-            // );
+
             if !matches!(self.peek()._type, TokenType::RightParen) {
                 return Err("Expect ')' after expression".to_string());
             }
-            // self.advance();
+            self.advance();
             return Ok(Expression::Grouping(Box::new(expression.unwrap())));
         }
         return Err("Unknown Error".to_string());
     }
-
-    // fn consume(&self, _type: TokenType, message: String) -> Token {
-    //     if self.check(_type) {
-    //         return self.advance();
-    //     }
-
-    //     return Err(error(self.peek(), message));
-    // }
 
     fn error(token: Token, message: String) -> String {
         match token._type {
