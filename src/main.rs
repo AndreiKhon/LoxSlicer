@@ -422,7 +422,7 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> ParserResult {
+    fn parse(&mut self) -> ParserResult {
         return self.expression();
     }
 
@@ -512,27 +512,26 @@ impl Parser {
             let expression = self.expression()?;
 
             if !matches!(self.peek()._type, TokenType::RightParen) {
-                return Err("Expect ')' after expression".to_string());
+                return Err(Parser::error(
+                    self.peek().clone(),
+                    "Expect ')' after expression".to_string(),
+                ));
             }
             self.advance();
             return Ok(Expression::Grouping(Box::new(expression)));
         }
-        return Err("Unknown Error".to_string());
+        return Err(Parser::error(
+            self.peek().clone(),
+            "Unknown Error".to_string(),
+        ));
     }
 
     fn error(token: Token, message: String) -> String {
         match token._type {
-            TokenType::Eof => token.line.to_string() + " at end" + &message,
-            _ => token.line.to_string() + " at" + &token.lexeme + "'" + &message,
+            TokenType::Eof => token.line.to_string() + " at end. " + &message,
+            _ => token.line.to_string() + " at '" + &token.lexeme + "' " + &message,
         }
     }
-
-    // fn check(&self, token_type: TokenType) -> bool {
-    //     if !self.is_at_end() {
-    //         return false;
-    //     }
-    //     return matches!(self.peek()._type, token_type);
-    // }
 
     fn advance(&mut self) -> Token {
         if !self.is_at_end() {
@@ -551,6 +550,146 @@ impl Parser {
 
     fn previous(&self) -> Token {
         return self.tokens[self.current - 1].clone();
+    }
+}
+
+pub struct Interpreter {}
+
+#[derive(PartialEq)]
+enum Object {
+    Nil,
+    Boolean(bool),
+    Number(f64),
+    String(String),
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Object::Nil => writeln!(f, "nil"),
+            Object::Boolean(b) => writeln!(f, "{}", b),
+            Object::Number(n)=> writeln!(f, "{}", n),
+            Object::String(s) => writeln!(f, "{}", s)
+        }
+    }
+}
+
+type InterpreterResult = Result<Object, String>;
+
+impl Interpreter {
+    fn evaluate(&self, expression: &Expression) -> InterpreterResult {
+        match expression {
+            Expression::Literal(value) => match &value._type {
+                TokenType::Nil => return Ok(Object::Nil),
+                TokenType::True => return Ok(Object::Boolean(true)),
+                TokenType::False => return Ok(Object::Boolean(false)),
+                TokenType::Number(n) => return Ok(Object::Number(*n)),
+                TokenType::StringLiteral(s) => return Ok(Object::String(s.to_string())),
+                a => return Err(format!("'{}': Wrong literal", a)),
+            },
+            Expression::Unary(operator, value) => {
+                let right = self.evaluate(value)?;
+                match operator._type {
+                    TokenType::Minus => match right {
+                        Object::Number(n) => return Ok(Object::Number(-n)),
+                        _ => Err(format!("'{}': Operand must be a number", operator._type)),
+                    },
+                    TokenType::Bang => return Ok(Object::Boolean(!Interpreter::is_truthy(&right))),
+                    _ => Err(format!("'{}': Wrong unari operator", operator._type)),
+                }
+            }
+            Expression::Binary(lhs, operator, rhs) => {
+                let lhs = self.evaluate(lhs)?;
+                let rhs = self.evaluate(rhs)?;
+
+                match operator._type {
+                    TokenType::Minus => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n - m)),
+                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                    },
+                    TokenType::Slash => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n / m)),
+                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                    },
+                    TokenType::Star => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n * m)),
+                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                    },
+                    TokenType::Plus => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n + m)),
+                        (Object::String(s), Object::String(t)) => {
+                            return Ok(Object::String(s + &t))
+                        }
+                        _ => {
+                            return Err(format!(
+                                "'{}': Operands must be numbers or strings",
+                                operator._type
+                            ))
+                        }
+                    },
+                    TokenType::Greater => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => {
+                            return Ok(Object::Boolean(n > m))
+                        }
+                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                    },
+                    TokenType::GreaterEqual => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => {
+                            return Ok(Object::Boolean(n >= m))
+                        }
+                        _ => {
+                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            eprintln!("{}", err);
+                            return Err(err);
+                        }
+                    },
+                    TokenType::Less => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => {
+                            return Ok(Object::Boolean(n < m))
+                        }
+                        _ => {
+                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            eprintln!("{}", err);
+                            return Err(err);
+                        }
+                    },
+                    TokenType::LessEqual => match (lhs, rhs) {
+                        (Object::Number(n), Object::Number(m)) => {
+                            return Ok(Object::Boolean(n <= m))
+                        }
+                        _ => {
+                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            eprintln!("{}", err);
+                            return Err(err);
+                        }
+                    },
+                    TokenType::BangEqual => {
+                        return Ok(Object::Boolean(!Interpreter::is_equal(&lhs, &rhs)))
+                    }
+                    TokenType::EqualEqual => {
+                        return Ok(Object::Boolean(Interpreter::is_equal(&lhs, &rhs)))
+                    }
+                    _ => return Err(format!("'{}': Wrong binary expression", operator._type)),
+                }
+            }
+            Expression::Grouping(value) => return self.evaluate(value),
+        }
+    }
+
+    fn is_truthy(object: &Object) -> bool {
+        match object {
+            Object::Nil => false,
+            Object::Boolean(b) => *b,
+            _ => true,
+        }
+    }
+
+    fn is_equal(lhs: &Object, rhs: &Object) -> bool {
+        match (lhs, rhs) {
+            (Object::Nil, Object::Nil) => return true,
+            (Object::Nil, _) => return false,
+            (a, b) => return a == b,
+        }
     }
 }
 
@@ -595,6 +734,38 @@ fn main() {
 
             let expression = Parser::new(tokens).parse();
             match expression {
+                Ok(n) => println!("{}", n),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(65);
+                }
+            }
+        }
+        "evaluate" => {
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+
+            let (tokens, exit_code) = Scanner::scan(file_contents);
+
+            if exit_code != 0 {
+                exit(exit_code)
+            }
+
+            let expression = Parser::new(tokens).parse();
+            match &expression {
+                Ok(n) => (),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(65);
+                }
+            }
+
+            let expression = expression.unwrap();
+            let interpreter = Interpreter{};
+            let value = interpreter.evaluate(&expression);
+            match &value {
                 Ok(n) => println!("{}", n),
                 Err(e) => {
                     eprintln!("{}", e);
