@@ -585,17 +585,17 @@ impl Interpreter {
                 TokenType::False => return Ok(Object::Boolean(false)),
                 TokenType::Number(n) => return Ok(Object::Number(*n)),
                 TokenType::StringLiteral(s) => return Ok(Object::String(s.to_string())),
-                a => return Err(format!("'{}': Wrong literal", a)),
+                a => return Err(format!("Wrong literal", a)),
             },
             Expression::Unary(operator, value) => {
                 let right = self.evaluate(value)?;
                 match operator._type {
                     TokenType::Minus => match right {
                         Object::Number(n) => return Ok(Object::Number(-n)),
-                        _ => Err(format!("'{}': Operand must be a number", operator._type)),
+                        _ => Err(format!("Operand must be a number", operator._type)),
                     },
                     TokenType::Bang => return Ok(Object::Boolean(!Interpreter::is_truthy(&right))),
-                    _ => Err(format!("'{}': Wrong unari operator", operator._type)),
+                    _ => Err(format!("Wrong unari operator", operator._type)),
                 }
             }
             Expression::Binary(lhs, operator, rhs) => {
@@ -605,15 +605,15 @@ impl Interpreter {
                 match operator._type {
                     TokenType::Minus => match (lhs, rhs) {
                         (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n - m)),
-                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                        _ => return Err(format!("Operands must be numbers", operator._type)),
                     },
                     TokenType::Slash => match (lhs, rhs) {
                         (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n / m)),
-                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                        _ => return Err(format!("Operands must be numbers", operator._type)),
                     },
                     TokenType::Star => match (lhs, rhs) {
                         (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n * m)),
-                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                        _ => return Err(format!("Operands must be numbers", operator._type)),
                     },
                     TokenType::Plus => match (lhs, rhs) {
                         (Object::Number(n), Object::Number(m)) => return Ok(Object::Number(n + m)),
@@ -622,7 +622,7 @@ impl Interpreter {
                         }
                         _ => {
                             return Err(format!(
-                                "'{}': Operands must be numbers or strings",
+                                "Operands must be numbers or strings",
                                 operator._type
                             ))
                         }
@@ -631,14 +631,14 @@ impl Interpreter {
                         (Object::Number(n), Object::Number(m)) => {
                             return Ok(Object::Boolean(n > m))
                         }
-                        _ => return Err(format!("'{}': Operands must be numbers", operator._type)),
+                        _ => return Err(format!("Operands must be numbers", operator._type)),
                     },
                     TokenType::GreaterEqual => match (lhs, rhs) {
                         (Object::Number(n), Object::Number(m)) => {
                             return Ok(Object::Boolean(n >= m))
                         }
                         _ => {
-                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            let err = format!("Operands must be numbers", operator._type);
                             eprintln!("{}", err);
                             return Err(err);
                         }
@@ -648,7 +648,7 @@ impl Interpreter {
                             return Ok(Object::Boolean(n < m))
                         }
                         _ => {
-                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            let err = format!("Operands must be numbers", operator._type);
                             eprintln!("{}", err);
                             return Err(err);
                         }
@@ -658,7 +658,7 @@ impl Interpreter {
                             return Ok(Object::Boolean(n <= m))
                         }
                         _ => {
-                            let err = format!("'{}': Operands must be numbers", operator._type);
+                            let err = format!("Operands must be numbers", operator._type);
                             eprintln!("{}", err);
                             return Err(err);
                         }
@@ -669,7 +669,7 @@ impl Interpreter {
                     TokenType::EqualEqual => {
                         return Ok(Object::Boolean(Interpreter::is_equal(&lhs, &rhs)))
                     }
-                    _ => return Err(format!("'{}': Wrong binary expression", operator._type)),
+                    _ => return Err(format!("Wrong binary expression", operator._type)),
                 }
             }
             Expression::Grouping(value) => return self.evaluate(value),
